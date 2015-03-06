@@ -52,6 +52,9 @@
 			if(function_exists('add_image_size')) {
 				add_image_size('full-size',  9999, 9999, false);
 				add_image_size('small-thumb',  90, 90, true);
+				add_image_size('medium-thumb',  150, 150, true);
+				add_image_size('logo',  512, 103, true);
+
 			}
 		}
 		add_action( 'after_setup_theme', 'themestudio_setup' );

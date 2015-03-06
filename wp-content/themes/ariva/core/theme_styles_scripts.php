@@ -96,7 +96,8 @@ if( !function_exists( 'ts_load_css' ) ) {
 		    'YTPlayer',
 		    'cubeportfolio',
 		    'styles',
-		    'custom'
+		    'custom',
+		    'abbot-addons'
 		);
 
 		wp_enqueue_style( 'ariva-style', get_stylesheet_uri() );

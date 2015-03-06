@@ -27,9 +27,9 @@ if( is_page( ) && basename( get_page_template() ) == 'onepage-template.php' ){
         <header class="<?php echo  esc_attr($ts_class_header) ?>">
             <div class="main-header">
                 <div class="container">
-                    <div class="logo">
+                    <!-- <div class="logo">
                         <h1><a href="<?php echo get_home_url(); ?>" class="ariva_logo"><img src="<?php echo esc_url($ts_ariva['ts-logo']['url']); ?>" data-at2x="<?php echo esc_url($ts_ariva['ts-logo2x']['url']); ?>" alt="<?php echo get_bloginfo('name') ?>"></a></h1>
-                    </div>
+                    </div> -->
                     <?php if ($ts_ariva['menu-style'] == 'clasic_menu') {
                         $ts_class = 'menubar-default';
                     }else if ($ts_ariva['menu-style'] == 'dropdown_menu') {
@@ -79,4 +79,7 @@ if( is_page( ) && basename( get_page_template() ) == 'onepage-template.php' ){
             <?php endif ?>
         </header>
         <!-- END HEADER -->
+
+        <!-- VIEW PORT TEST DIV -->
+        <div id="vw-test" style="opacity:0;"></div>
         
