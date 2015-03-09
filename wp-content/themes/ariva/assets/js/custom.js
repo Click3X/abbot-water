@@ -1,34 +1,5 @@
 (function($){
 
-    // START TEST FOR VIEWPORT UNIT SUPPORT -----------------------------------------------
-    // var $testEl = $("#vw-test"),
-    //     $vhFull = $(".vh-full"),
-    //     // winHeight  = window.innerHeight;
-    //     winHeight  = $(window).height();
-
-    // $testEl.css({
-    //     height: "100vh"
-    // });
-
-    // function fixVh() {
-    //     winHeight  = $(window).height();
-    //     $vhFull.css('height', winHeight);
-    // }
-
-
-    // if ( winHeight - 5 < $testEl.height() < winHeight + 5) {
-    //     console.log('vh-cool');
-    //     $testEl.html('<h1 style="color:blue;">This is $testEl Height: ' + $testEl.height() + '.</h1>');
-    //     console.log(winHeight);
-    //     console.log($testEl.height());
-    // } else {
-    //     console.log('vh-unsupported');
-    //     console.log(winHeight);
-    //     $testEl.text('<h1 style="color:blue;">This is $testEl Height: ' + $testEl.height() + '.</h1>');
-    //     // fixVh();
-    // }
-    // END TEST FOR VIEWPORT UNIT SUPPORT -----------------------------------------------
-
 /* ==============================================
 Page Loader
 =============================================== */

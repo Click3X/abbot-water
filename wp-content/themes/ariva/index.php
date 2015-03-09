@@ -10,9 +10,7 @@
     get_header();
     global $ts_ariva;
 ?>
-     <?php 
-     get_template_part('content-parts/page', 'banner'); 
-     ?>
+     <?php get_template_part('content-parts/page', 'banner'); ?>
     <!-- Main content -->
     <div id="main-content">
         <div class="container">

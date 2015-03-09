@@ -8,23 +8,13 @@
     */
     global $ts_ariva;
 ?>
-        <footer id="page-footer" class="page-footer">
+        <footer>
             <div class="container">
-                <?php
-                    $args = array( 'page_id' => 14 );
-                    // The Query
-                    $the_query = new WP_Query( $args );
-                    // The Loop
-                    if ( $the_query->have_posts() ) {
-                        while ( $the_query->have_posts() ) {
-                            $the_query->the_post();
-                            echo '<div class="whole">';
-                                the_content();
-                            echo '</div>';
-                        }
-                    } 
-                    wp_reset_postdata();
-                ?>           
+                    <?php get_template_part('content-parts/footer', 'socials'); ?>
+                <div id="flags_language_selector"><?php language_selector_flags(); ?></div >
+                <div class="copyright">
+                    <?php echo apply_filters('the_content',  $ts_ariva['footer_copyright_text']); ?>
+                </div>
             </div>
         </footer>
 
@@ -47,6 +37,6 @@
             </script>";
         }
     ?>
-    
+
 </body>
 </html>
