@@ -4,6 +4,18 @@
   margin-top:0;
 }
 
+.clearfix:before,
+.clearfix:after {
+    content: "";
+    display: table;
+} 
+.clearfix:after {
+    clear: both;
+}
+.clearfix {
+    zoom: 1; /* For IE 6/7 (trigger hasLayout) */
+}
+
 .tile {
   background-color:#556;
   background-image: linear-gradient(30deg, salmon 12%, transparent 12.5%, transparent 87%, salmon 87.5%, salmon),
@@ -24,13 +36,14 @@
   .vh-full { min-height: 768px;}
 }
 
-.half {
+.half, .full {
   width:100%;
   float: left;
 }
 
-@media(min-width:500px) { 
+@media(min-width:600px) { 
   .half {width:50%;}
+  .bio-content {padding-left:15px;}
 }
 
 .row {

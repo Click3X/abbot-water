@@ -39,7 +39,7 @@
         
         <!-- BIO -->
         <div id="page-bio" class="row">
-            <div class="container">
+            <div class="container clearfix">
                 <?php
                     $args = array( 'page_id' => 8 );
                     // The Query
@@ -52,17 +52,22 @@
                             $name = get_field('name');
                             $title = get_field('title');
                             $image = get_field('image');
+                            $additional_text_box = get_field('additional_text_box');
 
                             echo '<h1 class="page-title">'.get_the_title().'</h1>';
 
-                            echo '<div class="half">';
+                            echo '<div class="half clearfix">';
                                 echo '<h2>'.$name.'</h2>';
                                 echo '<h3>'.$title.'</h3>';
                                 echo '<img src="'.$image['url'].'" class="bio-img">';
                             echo '</div>';
 
-                            echo '<div class="half">';
+                            echo '<div class="half bio-content clearfix">';
                                 the_content();
+                            echo '</div>';
+
+                            echo '<div class="full clearfix">';
+                                echo $additional_text_box;
                             echo '</div>';
                         }
                     } 
