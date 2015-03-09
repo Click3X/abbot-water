@@ -4,6 +4,11 @@
 <meta charset="<?php bloginfo( 'charset' ); ?>" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title><?php wp_title( '|', true, 'right' ); ?></title>
+
+<!-- LOAD TYPEKIT FONTS -->
+<script src="//use.typekit.net/awd0zdr.js"></script>
+<script>try{Typekit.load();}catch(e){}</script>
+
 <link rel="profile" href="http://gmpg.org/xfn/11" />
 <link rel="pingback" href="<?php bloginfo( 'pingback_url' ); ?>" />
 <?php if ( is_singular() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' ); ?>
