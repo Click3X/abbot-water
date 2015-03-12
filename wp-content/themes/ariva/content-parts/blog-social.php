@@ -1,4 +1,4 @@
-<div class="group-share pull-right">
+<div class="group-share pull-left">
     <span><?php echo __('Share on :', 'themestudio'); ?></span>
 	<a target="_blank" href="https://twitter.com/home?status=<?php the_permalink(); ?>">Twitter</a>/
   	<a target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=<?php the_permalink(); ?>">Facebook</a>/

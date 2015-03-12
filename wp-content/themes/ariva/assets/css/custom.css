@@ -1,0 +1,40 @@
+.portfolio-grid li img {
+	display: block;
+	width:100%;
+	padding:.5px;
+}
+
+.portfolio-grid {
+	margin:1px auto;
+	padding:0;
+}
+.portfolio-grid li { 
+	width:100%; 
+	float: left;
+}
+
+@media(min-width:712px) {
+	.portfolio-grid li { width:50%;}
+}
+@media(min-width:1187px) {
+	.portfolio-grid li { width:33.3333334%;}
+}
+@media(min-width:1662px) {
+	.portfolio-grid li { width:25%;}
+}
+
+/* 	TAKE HOVER OFF SERVICES */
+#services .ts-service-slide .item-service-slide:hover {
+  background:#fff;
+  color: rgb(37, 37, 37);
+}
+
+.ts-service-slide .item-service-slide:hover h3, 
+.ts-service-slide .item-service-slide:hover .icon {
+	  color: rgb(37, 37, 37);
+}
+
+.ts-service-slide .item-service-slide:hover hr {
+	  color: rgb(37, 37, 37);
+	  background: rgb(37, 37, 37);
+}

@@ -263,7 +263,7 @@ jQuery(document).ready(function ($) {
             $(this).addClass("active");
             var url = $(this).attr("href");
             var target = $(url).offset().top; 
-            $('html,body').animate({scrollTop:target -70}, 'slow');
+            $('html,body').animate({scrollTop:target -80}, 0);
             return false;
           });
 
@@ -274,7 +274,7 @@ jQuery(document).ready(function ($) {
       $('.ts-button-wellcome, .home-arrow > a').click(function(e){
         var url_wl = $(this).attr("href");
         var taget_wl = $(url_wl).offset().top;
-        $('html,body').animate({scrollTop:taget_wl-70},'slow');
+        $('html,body').animate({scrollTop:taget_wl-80},0);
         return false;
       })
     
