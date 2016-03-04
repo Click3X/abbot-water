@@ -5,12 +5,38 @@ Page Loader
 =============================================== */
 
 $(window).load(function() {
-    'use strict';
-    setTimeout( function() {
+    // 'use strict';
+    // setTimeout( function() {
        
-        $('#fixed_video').find('.mbYTP_wrapper').animate({opacity:1}, 500);
-        //mbYTP_wrapper$('find')
-    }, 800 );
+    //     $('#fixed_video').find('.mbYTP_wrapper').animate({opacity:1}, 500);
+    //     //mbYTP_wrapper$('find')
+    // }, 800 );
+
+    
+    $('#home-header > div.home-header .vc_column_container').css('padding-bottom', 0);
+    // $('.fixed-text').css('opacity', 1);
+
+    // CHECK FOR VIEW PORT HEIGHT UNIT SUPPORT //
+    var $homeHeader = $('#new-home-header-container .new-home-header-container');
+
+    var testEl = $("#vw-test");
+    testEl.css({
+        height: "100vh",
+        display:"none"
+    });
+
+    // VIEW PORT HEGHT FIXES
+    var winHeight  = window.innerHeight,
+        testElHeight = testEl.height();
+    
+    if (testEl.height() == winHeight) {
+        // console.log("vh-supported");
+    } else {
+        // console.log("vh-unsupported");
+        $homeHeader.height(winHeight);
+    }
+    // END CHECK FOR VIEW PORT HEIGHT UNIT SUPPORT //
+
 });
 /* ==============================================
 Home Super Slider (images)
@@ -95,13 +121,37 @@ jQuery(function(){
 
 
 jQuery(document).ready(function ($) {
+
+    /*
+
+    jQuery Plugin: Outline Button
+    author: Charles Davis
+    purpose: To provide a debugger button that when clicked will toggle a red outline of all html elements
+
+    */
+    // (function($) {
+    //     // APPEND STYLES TO HEAD
+    //     $('head').append('<style>#outline {position:fixed;z-index:1000;bottom:50px;right:50px; width:20px; height:20px; } .outlines {outline:1px solid rgba(255, 0, 0, 0.3); }</style>');
+    //     // APPEND DEBUGGER BUTTON TO BODY
+    //     $('body').append('<input id=\"outline\" type=\"button\">');
+    //     // CLICK EVENT HANDLER
+    //     $('#outline').click(function() {
+    //         $('*').toggleClass('outlines');
+    //     });
+        
+    // })(jQuery);
+
+
+
+
     //SERVICE SLIDER
     if ($(".ts-service-slide").length > 0) {
     
         $(".ts-service-slide").owlCarousel({
             items: 3,
-            autoPlay: 6000,
-            slideSpeed: 3000,
+            // autoPlay: 6000,
+            autoPlay: false,
+            slideSpeed: 600,
             navigation: false,
             pagination: true,
             singleItem: false,
@@ -113,8 +163,9 @@ jQuery(document).ready(function ($) {
     if ($(".ts-feature-slide").length > 0) {
     
         $(".ts-feature-slide").owlCarousel({
-            autoPlay: false,
-            slideSpeed: 3000,
+            // autoPlay: false,
+            autoPlay: ffalse,
+            slideSpeed: 360,
             navigation: true,
             pagination: false,
             singleItem: true,
@@ -133,6 +184,59 @@ jQuery(document).ready(function ($) {
         });
     });
 
+
+    // ON WINDOW RESIZE ADJUST HEIGHTS
+    var owlItems = $('.owl-item > .item-service-slide'),
+        maxHeight,
+        resizeTimeout,
+        resizeHandler;
+
+    maxHeight = Math.max.apply(null, owlItems.map(function () {
+        return $(this).height();
+    }).get());
+
+    owlItems.each(function() {
+        $(this).height(maxHeight);
+    })
+
+    // R E S I Z E 
+    $(window).resize(function() {
+        if (resizeTimeout) {
+            // clear the timeout, if one is pending
+            clearTimeout(resizeTimeout);
+            resizeTimeout = null;
+        }
+        resizeTimeout = setTimeout(resizeHandler, 60/1000);
+    });
+
+    resizeHandler = function(argument) {
+        owlItems.map(function () {
+            $(this).height('auto');
+        });
+        maxHeight = Math.max.apply(null, owlItems.map(function () {
+            return $(this).height();
+        }).get());
+
+        owlItems.each(function() {
+            $(this).height(maxHeight);
+        })
+    }
+    // E N D    R E S I Z E
+
+
+    // D I S A B L E   Z O O M   B U G   O N   O R I E N T A T I O N   C H A N G E
+    if (navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/iPad/i)) {
+         var viewportmeta = document.querySelector('meta[name="viewport"]');
+         if (viewportmeta) {
+              viewportmeta.content = 'width=device-width, minimum-scale=1.0, maximum-scale=1.0';
+              document.body.addEventListener('gesturestart', function() {
+                   viewportmeta.content = 'width=device-width, minimum-scale=0.25, maximum-scale=1.6';
+              }, false);
+         }
+    }
+    // E N D   D I S A B L E   Z O O M   B U G   O N   O R I E N T A T I O N   C H A N G E
+
+
     //HOVER EFFECT
      // handle the mouseenter functionality
     $(".ts-item-member").mouseenter(function(){
@@ -147,8 +251,9 @@ jQuery(document).ready(function ($) {
     if ($(".ts-testimonial-slide").length > 0) {
     
         $(".ts-testimonial-slide").owlCarousel({
-            autoPlay: 4000,
-            slideSpeed: 3000,
+            // autoPlay: 4000,
+            autoPlay: false,
+            slideSpeed: 600,
             navigation: false,
             pagination: true,
             singleItem: true
@@ -160,8 +265,9 @@ jQuery(document).ready(function ($) {
     
         $(".ts-client-slide").owlCarousel({
             items: 3,
-            autoPlay: 4000,
-            slideSpeed: 3000,
+            // autoPlay: 4000,
+            autoPlay: false,
+            slideSpeed: 600,
             navigation: true,
             pagination: false,
             singleItem: false,
@@ -176,8 +282,9 @@ jQuery(document).ready(function ($) {
     if ($(".blog-grallery").length > 0) {
     
         $(".blog-grallery").owlCarousel({
-            autoPlay: 4000,
-            slideSpeed: 3000,
+            // autoPlay: 4000,
+            autoPlay: false,
+            slideSpeed: 600,
             navigation: true,
             pagination: false,
             singleItem: true,
@@ -202,6 +309,7 @@ jQuery(document).ready(function ($) {
         },1000)
         $('.social-top').show();
     });
+
     //MAIN MENU DEFAULT
     widthW = $(window).width();
     if(widthW<768){
@@ -253,6 +361,29 @@ jQuery(document).ready(function ($) {
         offset: offs
       });
 
+
+      // // if hash
+      // if(window.location.hash) {
+      //     // var noHash = window.location.hash.substring(1); //Puts hash in variable, and removes the # character
+      //     var hash = window.location.hash;
+      //     // alert (noHash);
+      //     console.log(hash);
+
+      //     var $hash = $(hash).get(0);
+      //     console.dir($hash);
+
+      //     // var url_wl = $(this).attr("href");
+      //       var target_wl = $hash.offsetTop;
+
+      //       console.log('This is target_wl: ' + target_wl);
+
+      //       $('html,body').animate({scrollTop:target_wl-200},0);
+
+      //       return false;
+      //     // hash found
+      // } else {
+      //     // No hash found
+      // }
       //MENU ONEPAGE
         $(".ts-main-menu ul a").click(function(e){
             var windowWidth = $(window).width();
@@ -264,6 +395,11 @@ jQuery(document).ready(function ($) {
             var url = $(this).attr("href");
             var target = $(url).offset().top; 
             $('html,body').animate({scrollTop:target -80}, 0);
+
+            if(windowWidth<=767) {
+                $('#default-menu-position').hide();
+            }
+
             return false;
           });
 

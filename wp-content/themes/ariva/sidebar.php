@@ -8,5 +8,10 @@
 	*/
 ?>
 <?php if ( is_active_sidebar( 'primary' ) ) : ?>
+	<?php
+		$page_id = 274;
+		$page_object = get_page( $page_id );
+		echo $page_object->post_content;
+	?>
    	<?php dynamic_sidebar( 'primary' ); ?>
 <?php endif;

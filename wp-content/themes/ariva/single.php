@@ -41,10 +41,11 @@
                 <div class="page-ct col-md-<?php echo esc_attr($col_md); ?> col-lg-<?php echo esc_attr($col_lg); ?> col-sm-<?php echo esc_attr($col_sm); ?>">
                     <div class="blog-single">
                          <div class="blog-item">
-                            <span class="icon-post-type"><i class="fa fa-camera-retro"></i></span>
+                            <!-- <span class="icon-post-type"><i class="fa fa-camera-retro"></i></span> -->
                             <article>
                                 <!--Blog Title-->
                                 <h3><a href="#" title=""><?php the_title( ); ?></a></h3>
+                                <div style="background:#252525" class="hr align-center new-hr"></div>
                                 <!--End Blog Title-->
                                 <!--Blog Date-->
                                 <?php get_template_part('content-parts/blog', 'metas'); ?>

@@ -18,9 +18,10 @@
     }
 ?>
 <div id="post-<?php the_ID(); ?>" <?php post_class('blog-item'); ?>>
-    <span class="icon-post-type"><i class="fa <?php echo esc_attr($post_format_class) ?>"></i></span>
+    <!-- <span class="icon-post-type"><i class="fa <?php echo esc_attr($post_format_class) ?>"></i></span> -->
     <article>
         <h3><a title="<?php the_title();?>" href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+        <div style="background:#252525" class="hr align-center new-hr"></div>
         <?php get_template_part('content-parts/blog', 'metas'); ?>
         <?php get_template_part( 'post-formats/post', $format ); ?>
         <?php if ($ts_ariva['ts-blog-content']=='content'): ?>

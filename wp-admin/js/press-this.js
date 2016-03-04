@@ -4,19 +4,25 @@
  */
 ( function( $, window ) {
 	var PressThis = function() {
-		var editor,
+		var editor, $mediaList, $mediaThumbWrap,
+			$window               = $( window ),
+			$document             = $( document ),
 			saveAlert             = false,
 			textarea              = document.createElement( 'textarea' ),
-			siteConfig            = window.wpPressThisConfig || {},
+			sidebarIsOpen         = false,
+			settings              = window.wpPressThisConfig || {},
 			data                  = window.wpPressThisData || {},
 			smallestWidth         = 128,
-			interestingImages	  = getInterestingImages( data ) || [],
-			interestingEmbeds	  = getInterestingEmbeds( data ) || [],
-			hasEmptyTitleStr      = false,
-			suggestedTitleStr     = getSuggestedTitle( data ),
-			suggestedContentStr   = getSuggestedContent( data ),
 			hasSetFocus           = false,
 			catsCache             = [],
+			isOffScreen           = 'is-off-screen',
+			isHidden              = 'is-hidden',
+			offscreenHidden       = isOffScreen + ' ' + isHidden,
+			iOS                   = /iPad|iPod|iPhone/.test( window.navigator.userAgent ),
+			$textEditor           = $( '#pressthis' ),
+			textEditor            = $textEditor[0],
+			textEditorMinHeight   = 600,
+			textLength            = 0,
 			transitionEndEvent    = ( function() {
 				var style = document.documentElement.style;
 
@@ -71,10 +77,14 @@
 		 * @returns string Sanitized text.
 		 */
 		function sanitizeText( text ) {
-			text = stripTags( text );
-			textarea.innerHTML = text;
+			var _text = stripTags( text );
 
-			return stripTags( textarea.value );
+			try {
+				textarea.innerHTML = _text;
+				_text = stripTags( textarea.value );
+			} catch ( er ) {}
+
+			return _text;
 		}
 
 		/**
@@ -95,227 +105,138 @@
 		}
 
 		/**
-		 * Gets the source page's canonical link, based on passed location and meta data.
-		 *
-		 * @returns string Discovered canonical URL, or empty
-		 */
-		function getCanonicalLink() {
-			var link = '';
-
-			if ( data._links && data._links.canonical ) {
-				link = data._links.canonical;
-			}
-
-			if ( ! link && data.u ) {
-				link = data.u;
-			}
-
-			if ( ! link && data._meta ) {
-				if ( data._meta['twitter:url'] ) {
-					link = data._meta['twitter:url'];
-				} else if ( data._meta['og:url'] ) {
-					link = data._meta['og:url'];
-				}
-			}
-
-			return checkUrl( decodeURI( link ) );
-		}
-
-		/**
-		 * Gets the source page's site name, based on passed meta data.
-		 *
-		 * @returns string Discovered site name, or empty
-		 */
-		function getSourceSiteName() {
-			var name = '';
-
-			if ( data._meta ) {
-				if ( data._meta['og:site_name'] ) {
-					name = data._meta['og:site_name'];
-				} else if ( data._meta['application-name'] ) {
-					name = data._meta['application-name'];
-				}
-			}
-
-			return sanitizeText( name );
-		}
-
-		/**
-		 * Gets the source page's title, based on passed title and meta data.
-		 *
-		 * @returns string Discovered page title, or empty
-		 */
-		function getSuggestedTitle() {
-			var title = '';
-
-			if ( data.t ) {
-				title = data.t;
-			}
-
-			if ( ! title && data._meta ) {
-				if ( data._meta['twitter:title'] ) {
-					title = data._meta['twitter:title'];
-				} else if ( data._meta['og:title'] ) {
-					title = data._meta['og:title'];
-				} else if ( data._meta.title ) {
-					title = data._meta.title;
-				}
-			}
-
-			if ( ! title ) {
-				title = __( 'newPost' );
-				hasEmptyTitleStr = true;
-			}
-
-			return sanitizeText( title );
-		}
-
-		/**
-		 * Gets the source page's suggested content, based on passed data (description, selection, etc).
-		 * Features a blockquoted excerpt, as well as content attribution, if any.
-		 *
-		 * @returns string Discovered content, or empty
-		 */
-		function getSuggestedContent() {
-			var content  = '',
-				text     = '',
-				title    = getSuggestedTitle(),
-				url      = getCanonicalLink(),
-				siteName = getSourceSiteName();
-
-			if ( data.s ) {
-				text = data.s;
-			} else if ( data._meta ) {
-				if ( data._meta['twitter:description'] ) {
-					text = data._meta['twitter:description'];
-				} else if ( data._meta['og:description'] ) {
-					text = data._meta['og:description'];
-				} else if ( data._meta.description ) {
-					text = data._meta.description;
-				}
-			}
-
-			if ( text && siteConfig.html.quote ) {
-				// Wrap suggested content in specified HTML.
-				content = siteConfig.html.quote.replace( /%1\$s/g, sanitizeText( text ) );
-			}
-
-			// Add a source attribution if there is one available.
-			if ( url && siteConfig.html.link && ( ( title && __( 'newPost' ) !== title ) || siteName ) ) {
-				content += siteConfig.html.link.replace( /%1\$s/g, encodeURI( url ) ).replace( /%2\$s/g, ( title || siteName ) );
-			}
-
-			return content || '';
-		}
-
-		/**
-		 * Get a list of valid embeds from what was passed via WpPressThis_App.data._embed on page load.
-		 *
-		 * @returns array
-		 */
-		function getInterestingEmbeds() {
-			var embeds             = data._embed || [],
-				interestingEmbeds  = [],
-				alreadySelected    = [];
-
-			if ( embeds.length ) {
-				$.each( embeds, function ( i, src ) {
-					if ( ! src ) {
-						// Skip: no src value
-						return;
-					}
-
-					var schemelessSrc = src.replace( /^https?:/, '' );
-
-					if ( $.inArray( schemelessSrc, alreadySelected ) > -1 ) {
-						// Skip: already shown
-						return;
-					}
-
-					interestingEmbeds.push( src );
-					alreadySelected.push( schemelessSrc );
-				} );
-			}
-
-			return interestingEmbeds;
-		}
-
-		/**
-		 * Get a list of valid images from what was passed via WpPressThis_App.data._img and WpPressThis_App.data._meta on page load.
-		 *
-		 * @returns array
-		 */
-		function getInterestingImages( data ) {
-			var imgs             = data._img || [],
-				interestingImgs  = [],
-				alreadySelected  = [];
-
-			if ( imgs.length ) {
-				$.each( imgs, function ( i, src ) {
-					src = src.replace( /http:\/\/[\d]+\.gravatar\.com\//, 'https://secure.gravatar.com/' );
-					src = checkUrl( src );
-
-					if ( ! src ) {
-						// Skip: no src value
-						return;
-					}
-
-					var schemelessSrc = src.replace( /^https?:/, '' );
-
-					if ( Array.prototype.indexOf && alreadySelected.indexOf( schemelessSrc ) > -1 ) {
-						// Skip: already shown
-						return;
-					} else if ( src.indexOf( 'avatar' ) > -1 && interestingImgs.length >= 15 ) {
-						// Skip:  some type of avatar and we've already gathered more than 23 diff images to show
-						return;
-					}
-
-					interestingImgs.push( src );
-					alreadySelected.push( schemelessSrc );
-				} );
-			}
-
-			return interestingImgs;
-		}
-
-		/**
 		 * Show UX spinner
 		 */
 		function showSpinner() {
-			$( '#spinner' ).addClass( 'show' );
-			$( '.post-actions button' ).each( function() {
-				$( this ).attr( 'disabled', 'disabled' );
-			} );
+			$( '.spinner' ).addClass( 'is-active' );
+			$( '.post-actions button' ).attr( 'disabled', 'disabled' );
 		}
 
 		/**
 		 * Hide UX spinner
 		 */
 		function hideSpinner() {
-			$( '#spinner' ).removeClass( 'show' );
-			$( '.post-actions button' ).each( function() {
-				$( this ).removeAttr( 'disabled' );
-			} );
+			$( '.spinner' ).removeClass( 'is-active' );
+			$( '.post-actions button' ).removeAttr( 'disabled' );
+		}
+
+		function textEditorResize( reset ) {
+			var pageYOffset, height;
+
+			if ( editor && ! editor.isHidden() ) {
+ 				return;
+ 			}
+
+			reset = ( reset === 'reset' ) || ( textLength && textLength > textEditor.value.length );
+			height = textEditor.style.height;
+
+			if ( reset ) {
+				pageYOffset = window.pageYOffset;
+
+				textEditor.style.height = 'auto';
+				textEditor.style.height = Math.max( textEditor.scrollHeight, textEditorMinHeight ) + 'px';
+				window.scrollTo( window.pageXOffset, pageYOffset );
+			} else if ( parseInt( textEditor.style.height, 10 ) < textEditor.scrollHeight ) {
+				textEditor.style.height = textEditor.scrollHeight + 'px';
+ 			}
+
+ 			textLength = textEditor.value.length;
+ 		}
+
+ 		function mceGetCursorOffset() {
+			if ( ! editor ) {
+				return false;
+			}
+
+			var node = editor.selection.getNode(),
+				range, view, offset;
+
+			if ( editor.wp && editor.wp.getView && ( view = editor.wp.getView( node ) ) ) {
+				offset = view.getBoundingClientRect();
+			} else {
+				range = editor.selection.getRng();
+
+				try {
+					offset = range.getClientRects()[0];
+				} catch( er ) {}
+
+				if ( ! offset ) {
+					offset = node.getBoundingClientRect();
+				}
+			}
+
+			return offset.height ? offset : false;
+		}
+
+		// Make sure the caret is always visible.
+		function mceKeyup( event ) {
+			var VK = window.tinymce.util.VK,
+				key = event.keyCode;
+
+			// Bail on special keys.
+			if ( key <= 47 && ! ( key === VK.SPACEBAR || key === VK.ENTER || key === VK.DELETE || key === VK.BACKSPACE || key === VK.UP || key === VK.LEFT || key === VK.DOWN || key === VK.UP ) ) {
+				return;
+			// OS keys, function keys, num lock, scroll lock
+			} else if ( ( key >= 91 && key <= 93 ) || ( key >= 112 && key <= 123 ) || key === 144 || key === 145 ) {
+				return;
+			}
+
+			mceScroll( key );
+		}
+
+		function mceScroll( key ) {
+			var cursorTop, cursorBottom, editorBottom,
+				offset = mceGetCursorOffset(),
+				bufferTop = 50,
+				bufferBottom = 65,
+				VK = window.tinymce.util.VK;
+
+			if ( ! offset ) {
+				return;
+			}
+
+			cursorTop = offset.top + editor.iframeElement.getBoundingClientRect().top;
+			cursorBottom = cursorTop + offset.height;
+			cursorTop = cursorTop - bufferTop;
+			cursorBottom = cursorBottom + bufferBottom;
+			editorBottom = $window.height();
+
+			// Don't scroll if the node is taller than the visible part of the editor
+			if ( editorBottom < offset.height ) {
+				return;
+			}
+
+			if ( cursorTop < 0 && ( key === VK.UP || key === VK.LEFT || key === VK.BACKSPACE ) ) {
+				window.scrollTo( window.pageXOffset, cursorTop + window.pageYOffset );
+			} else if ( cursorBottom > editorBottom ) {
+				window.scrollTo( window.pageXOffset, cursorBottom + window.pageYOffset - editorBottom );
+			}
 		}
 
 		/**
-		 * Submit the post form via AJAX, and redirect to the proper screen if published vs saved as a draft.
-		 *
-		 * @param action string publish|draft
+		 * Replace emoji images with chars and sanitize the text content.
 		 */
-		function submitPost( action ) {
-			saveAlert = false;
-			showSpinner();
+		function getTitleText() {
+			var $element = $( '#title-container' );
 
-			var $form = $( '#pressthis-form' );
+			$element.find( 'img.emoji' ).each( function() {
+				var $image = $( this );
+				$image.replaceWith( $( '<span>' ).text( $image.attr( 'alt' ) ) );
+			});
 
-			if ( 'publish' === action ) {
-				$( '#post_status' ).val( 'publish' );
-			}
+			return sanitizeText( $element.text() );
+		}
+
+		/**
+		 * Prepare the form data for saving.
+		 */
+		function prepareFormData() {
+			var $form = $( '#pressthis-form' ),
+				$input = $( '<input type="hidden" name="post_category[]" value="">' );
 
 			editor && editor.save();
 
-			$( '#title-field' ).val( sanitizeText( $( '#title-container' ).text() ) );
+			$( '#post_title' ).val( getTitleText() );
 
 			// Make sure to flush out the tags with tagBox before saving
 			if ( window.tagBox ) {
@@ -324,29 +245,64 @@
 				} );
 			}
 
-			var data = $form.serialize();
+			// Get selected categories
+			$( '.categories-select .category' ).each( function( i, element ) {
+				var $cat = $( element );
+
+				if ( $cat.hasClass( 'selected' ) ) {
+					// Have to append a node as we submit the actual form on preview
+					$form.append( $input.clone().val( $cat.attr( 'data-term-id' ) || '' ) );
+				}
+			});
+		}
+
+		/**
+		 * Submit the post form via AJAX, and redirect to the proper screen if published vs saved as a draft.
+		 *
+		 * @param action string publish|draft
+		 */
+		function submitPost( action ) {
+			var data;
+
+			saveAlert = false;
+			showSpinner();
+
+			if ( 'publish' === action ) {
+				$( '#post_status' ).val( 'publish' );
+			}
+
+			prepareFormData();
+			data = $( '#pressthis-form' ).serialize();
 
 			$.ajax( {
 				type: 'post',
 				url: window.ajaxurl,
-				data: data,
-				success: function( response ) {
-					if ( ! response.success ) {
-						renderError( response.data.errorMessage );
-						hideSpinner();
-					} else if ( response.data.redirect ) {
-						if ( window.opener && siteConfig.redirInParent ) {
-							try {
-								window.opener.location.href = response.data.redirect;
-							} catch( er ) {}
+				data: data
+			}).always( function() {
+				hideSpinner();
+				clearNotices();
+				$( '.publish-button' ).removeClass( 'is-saving' );
+			}).done( function( response ) {
+				if ( ! response.success ) {
+					renderError( response.data.errorMessage );
+				} else if ( response.data.redirect ) {
+					if ( window.opener && ( settings.redirInParent || response.data.force ) ) {
+						try {
+							window.opener.location.href = response.data.redirect;
 
-							window.self.close();
-						} else {
+							window.setTimeout( function() {
+								window.self.close();
+							}, 200 );
+						} catch( er ) {
 							window.location.href = response.data.redirect;
 						}
+					} else {
+						window.location.href = response.data.redirect;
 					}
 				}
-			} );
+			}).fail( function() {
+				renderError( __( 'serverError' ) );
+			});
 		}
 
 		/**
@@ -356,32 +312,31 @@
 		 * @param src string Source URL
 		 * @param link string Optional destination link, for images (defaults to src)
 		 */
-		function insertSelectedMedia( type, src, link ) {
-			var newContent = '';
+		function insertSelectedMedia( $element ) {
+			var src, link, newContent = '';
 
-			if ( ! editor ) {
-				return;
-			}
+			src = checkUrl( $element.attr( 'data-wp-src' ) || '' );
+			link = checkUrl( data.u );
 
-			src = checkUrl( src );
-			link = checkUrl( link );
-
-			if ( 'img' === type ) {
+			if ( $element.hasClass( 'is-image' ) ) {
 				if ( ! link ) {
 					link = src;
 				}
 
-				newContent = '<a href="' + link + '"><img class="alignnone size-full" src="' + src + '" /></a>\n';
+				newContent = '<a href="' + link + '"><img class="alignnone size-full" src="' + src + '" alt="" /></a>';
 			} else {
-				newContent = '[embed]' + src + '[/embed]\n';
+				newContent = '[embed]' + src + '[/embed]';
 			}
 
-			if ( ! hasSetFocus ) {
-				editor.focus();
+			if ( editor && ! editor.isHidden() ) {
+				if ( ! hasSetFocus ) {
+					editor.setContent( '<p>' + newContent + '</p>' + editor.getContent() );
+				} else {
+					editor.execCommand( 'mceInsertContent', false, newContent );
+				}
+			} else if ( window.QTags ) {
+				window.QTags.insertContent( newContent );
 			}
-
-			editor.execCommand( 'mceInsertContent', false, newContent );
-			hasSetFocus = true;
 		}
 
 		/**
@@ -407,18 +362,17 @@
 				if ( ! response.success ) {
 					renderError( response.data.errorMessage );
 				} else {
-					// TODO: change if/when the html changes.
 					var $parent, $ul,
 						$wrap = $( 'ul.categories-select' );
 
 					$.each( response.data, function( i, newCat ) {
-						var $node = $( '<li>' ).attr( 'id', 'category-' + newCat.term_id )
-							.append( $( '<label class="selectit">' ).text( newCat.name )
-								.append( $( '<input type="checkbox" name="post_category[]" checked>' ).attr( 'value', newCat.term_id ) ) );
+						var $node = $( '<li>' ).append( $( '<div class="category selected" tabindex="0" role="checkbox" aria-checked="true">' )
+							.attr( 'data-term-id', newCat.term_id )
+							.text( newCat.name ) );
 
 						if ( newCat.parent ) {
 							if ( ! $ul || ! $ul.length ) {
-								$parent = $wrap.find( '#category-' + newCat.parent );
+								$parent = $wrap.find( 'div[data-term-id="' + newCat.parent + '"]' ).parent();
 								$ul = $parent.find( 'ul.children:first' );
 
 								if ( ! $ul.length ) {
@@ -426,11 +380,12 @@
 								}
 							}
 
-							$ul.append( $node );
-							// TODO: set focus on
+							$ul.prepend( $node );
 						} else {
 							$wrap.prepend( $node );
 						}
+
+						$node.focus();
 					} );
 
 					refreshCatsCache();
@@ -446,7 +401,7 @@
 		 * Hide the form letting users enter a URL to be scanned, if a URL was already passed.
 		 */
 		function renderToolsVisibility() {
-			if ( data.u && data.u.match( /^https?:/ ) ) {
+			if ( data.hasData ) {
 				$( '#scanbar' ).hide();
 			}
 		}
@@ -473,6 +428,10 @@
 			renderNotice( msg, true );
 		}
 
+		function clearNotices() {
+			$( 'div.alerts' ).empty();
+		}
+
 		/**
 		 * Render notices on page load, if any already
 		 */
@@ -483,78 +442,36 @@
 					renderError( msg );
 				} );
 			}
-
-			// Prompt user to upgrade their bookmarklet if there is a version mismatch.
-			if ( data.v && data._version && ( data.v + '' ) !== ( data._version + '' ) ) {
-				$( '.should-upgrade-bookmarklet' ).removeClass( 'is-hidden' );
-			}
 		}
 
 		/**
-		 * Render the suggested title, if any
+		 * Add an image to the list of found images.
 		 */
-		function renderSuggestedTitle() {
-			var suggestedTitle = suggestedTitleStr || '',
-				$title = $( '#title-container' );
+		function addImg( src, displaySrc, i ) {
+			var $element = $mediaThumbWrap.clone().addClass( 'is-image' );
 
-			if ( ! hasEmptyTitleStr ) {
-				$( '#title-field' ).val( suggestedTitle );
-				$title.text( suggestedTitle );
-				$( '.post-title-placeholder' ).addClass( 'is-hidden' );
-			}
+			$element.attr( 'data-wp-src', src ).css( 'background-image', 'url(' + displaySrc + ')' )
+				.find( 'span' ).text( __( 'suggestedImgAlt' ).replace( '%d', i + 1 ) );
 
-			$title.on( 'keyup', function() {
-				saveAlert = true;
-			}).on( 'paste', function() {
-				saveAlert = true;
-
-				setTimeout( function() {
-					$title.text( $title.text() );
-				}, 100 );
-			} );
-
-		}
-
-		/**
-		 * Render the suggested content, if any
-		 */
-		function renderSuggestedContent() {
-			if ( ! suggestedContentStr ) {
-				return;
-			}
-
-			if ( ! editor ) {
-				editor = window.tinymce.get( 'pressthis' );
-			}
-
-			if ( editor ) {
-				editor.setContent( suggestedContentStr );
-				editor.on( 'focus', function() {
-					hasSetFocus = true;
-				} );
-			}
+			$mediaList.append( $element );
 		}
 
 		/**
 		 * Render the detected images and embed for selection, if any
 		 */
 		function renderDetectedMedia() {
-			var mediaContainer = $( '#featured-media-container'),
-				listContainer  = $( '#all-media-container' ),
-				found          = 0;
+			var found = 0;
 
-			listContainer.empty();
+			$mediaList = $( 'ul.media-list' );
+			$mediaThumbWrap = $( '<li class="suggested-media-thumbnail" tabindex="0"><span class="screen-reader-text"></span></li>' );
 
-			if ( interestingEmbeds || interestingImages ) {
-				listContainer.append( '<h2 class="screen-reader-text">' + __( 'allMediaHeading' ) + '</h2><ul class="wppt-all-media-list"/>' );
-			}
-
-			if ( interestingEmbeds ) {
-				$.each( interestingEmbeds, function ( i, src ) {
-					src = checkUrl( src );
-
+			if ( data._embeds ) {
+				$.each( data._embeds, function ( i, src ) {
 					var displaySrc = '',
-						cssClass   = 'suggested-media-thumbnail suggested-media-embed';
+						cssClass = '',
+						$element = $mediaThumbWrap.clone().addClass( 'is-embed' );
+
+					src = checkUrl( src );
 
 					if ( src.indexOf( 'youtube.com/' ) > -1 ) {
 						displaySrc = 'https://i.ytimg.com/vi/' + src.replace( /.+v=([^&]+).*/, '$1' ) + '/hqdefault.jpg';
@@ -573,61 +490,50 @@
 						cssClass += ' is-video';
 					}
 
-					$( '<li></li>', {
-						'id': 'embed-' + i + '-container',
-						'class': cssClass,
-						'tabindex': '0'
-					} ).css( {
-						'background-image': ( displaySrc ) ? 'url(' + displaySrc + ')' : null
-					} ).html(
-						'<span class="screen-reader-text">' + __( 'suggestedEmbedAlt' ).replace( '%d', i + 1 ) + '</span>'
-					).on( 'click keypress', function ( e ) {
-						if ( e.type === 'click' || e.which === 13 ) {
-							insertSelectedMedia( 'embed',src );
-						}
-					} ).appendTo( '.wppt-all-media-list', listContainer );
+					$element.attr( 'data-wp-src', src ).find( 'span' ).text( __( 'suggestedEmbedAlt' ).replace( '%d', i + 1 ) );
 
+					if ( displaySrc ) {
+						$element.css( 'background-image', 'url(' + displaySrc + ')' );
+					}
+
+					$mediaList.append( $element );
 					found++;
 				} );
 			}
 
-			if ( interestingImages ) {
-				$.each( interestingImages, function ( i, src ) {
-					src = checkUrl( src );
+			if ( data._images ) {
+				$.each( data._images, function( i, src ) {
+					var displaySrc, img = new Image();
 
-					var displaySrc = src.replace(/^(http[^\?]+)(\?.*)?$/, '$1');
+					src = checkUrl( src );
+					displaySrc = src.replace( /^(http[^\?]+)(\?.*)?$/, '$1' );
+
 					if ( src.indexOf( 'files.wordpress.com/' ) > -1 ) {
-						displaySrc = displaySrc.replace(/\?.*$/, '') + '?w=' + smallestWidth;
+						displaySrc = displaySrc.replace( /\?.*$/, '' ) + '?w=' + smallestWidth;
 					} else if ( src.indexOf( 'gravatar.com/' ) > -1 ) {
 						displaySrc = displaySrc.replace( /\?.*$/, '' ) + '?s=' + smallestWidth;
 					} else {
 						displaySrc = src;
 					}
 
-					$( '<li></li>', {
-						'id': 'img-' + i + '-container',
-						'class': 'suggested-media-thumbnail is-image',
-						'tabindex': '0'
-					} ).css( {
-						'background-image': 'url(' + displaySrc + ')'
-					} ).html(
-						'<span class="screen-reader-text">' +__( 'suggestedImgAlt' ).replace( '%d', i + 1 ) + '</span>'
-					).on( 'click keypress', function ( e ) {
-						if ( e.type === 'click' || e.which === 13 ) {
-							insertSelectedMedia( 'img', src, data.u );
-						}
-					} ).appendTo( '.wppt-all-media-list', listContainer );
+					img.onload = function() {
+						if ( ( img.width && img.width < 256 ) ||
+							( img.height && img.height < 128 ) ) {
 
+							return;
+						}
+
+						addImg( src, displaySrc, i );
+					};
+
+					img.src = src;
 					found++;
 				} );
 			}
 
-			if ( ! found ) {
-				mediaContainer.removeClass( 'all-media-visible' ).addClass( 'no-media');
-				return;
+			if ( found ) {
+				$( '.media-list-container' ).addClass( 'has-media' );
 			}
-
-			mediaContainer.removeClass( 'no-media' ).addClass( 'all-media-visible' );
 		}
 
 		/* ***************************************************************
@@ -638,50 +544,39 @@
 		 * Interactive navigation behavior for the options modal (post format, tags, categories)
 		 */
 		function monitorOptionsModal() {
-			var isOffScreen   = 'is-off-screen',
-				isHidden      = 'is-hidden',
-				$postOptions  = $( '.post-options' ),
+			var $postOptions  = $( '.post-options' ),
 				$postOption   = $( '.post-option' ),
 				$settingModal = $( '.setting-modal' ),
 				$modalClose   = $( '.modal-close' );
 
-			$postOption.on( 'click', function( event ) {
+			$postOption.on( 'click', function() {
 				var index = $( this ).index(),
 					$targetSettingModal = $settingModal.eq( index );
 
-				event.preventDefault();
-
-				$postOptions
-					.addClass( isOffScreen )
+				$postOptions.addClass( isOffScreen )
 					.one( transitionEndEvent, function() {
 						$( this ).addClass( isHidden );
 					} );
 
-				$targetSettingModal
-					.removeClass( isOffScreen + ' ' + isHidden )
+				$targetSettingModal.removeClass( offscreenHidden )
 					.one( transitionEndEvent, function() {
 						$( this ).find( '.modal-close' ).focus();
 					} );
 			} );
 
-			$modalClose.on( 'click', function( event ) {
+			$modalClose.on( 'click', function() {
 				var $targetSettingModal = $( this ).parent(),
 					index = $targetSettingModal.index();
 
-				event.preventDefault();
+				$postOptions.removeClass( offscreenHidden );
+				$targetSettingModal.addClass( isOffScreen );
 
-				$postOptions
-					.removeClass( isOffScreen + ' ' + isHidden );
-
-				$targetSettingModal
-					.addClass( isOffScreen )
-					.one( transitionEndEvent, function() {
+				if ( transitionEndEvent ) {
+					$targetSettingModal.one( transitionEndEvent, function() {
 						$( this ).addClass( isHidden );
 						$postOption.eq( index - 1 ).focus();
 					} );
-
-				// For browser that don't support transitionend.
-				if ( ! transitionEndEvent ) {
+				} else {
 					setTimeout( function() {
 						$targetSettingModal.addClass( isHidden );
 						$postOption.eq( index - 1 ).focus();
@@ -693,63 +588,122 @@
 		/**
 		 * Interactive behavior for the sidebar toggle, to show the options modals
 		 */
-		function monitorSidebarToggle() {
-			var $optOpen  = $( '.options-open' ),
-				$optClose = $( '.options-close' ),
-				$postOption = $( '.post-option' ),
-				$sidebar = $( '.options-panel' ),
-				$postActions = $( '.press-this-actions' ),
-				$scanbar = $( '#scanbar' ),
-				isOffScreen = 'is-off-screen',
-				isHidden = 'is-hidden',
-				ifOffHidden = isOffScreen + ' ' + isHidden;
+		function openSidebar() {
+			sidebarIsOpen = true;
 
-			$optOpen.on( 'click', function(){
-				$optOpen.addClass( isHidden );
-				$optClose.removeClass( isHidden );
-				$postActions.addClass( isHidden );
-				$scanbar.addClass( isHidden );
+			$( '.options' ).removeClass( 'closed' ).addClass( 'open' );
+			$( '.press-this-actions, #scanbar' ).addClass( isHidden );
+			$( '.options-panel-back' ).removeClass( isHidden );
 
-				$sidebar
-					.removeClass( ifOffHidden )
-					.one( 'transitionend', function() {
-						$postOption.eq( 0 ).focus();
-					} );
-			} );
+			$( '.options-panel' ).removeClass( offscreenHidden )
+				.one( transitionEndEvent, function() {
+					$( '.post-option:first' ).focus();
+				} );
+		}
 
-			$optClose.on( 'click', function(){
-				$optClose.addClass( isHidden );
-				$optOpen.removeClass( isHidden );
-				$postActions.removeClass( isHidden );
-				$scanbar.removeClass( isHidden );
+		function closeSidebar() {
+			sidebarIsOpen = false;
 
-				$sidebar
-					.addClass( isOffScreen )
-					.one( 'transitionend', function() {
-						$( this ).addClass( isHidden );
-						// Reset to options list
-						$( '.post-options' ).removeClass( ifOffHidden );
-						$( '.setting-modal').addClass( ifOffHidden );
-					} );
-			} );
+			$( '.options' ).removeClass( 'open' ).addClass( 'closed' );
+			$( '.options-panel-back' ).addClass( isHidden );
+			$( '.press-this-actions, #scanbar' ).removeClass( isHidden );
+
+			$( '.options-panel' ).addClass( isOffScreen )
+				.one( transitionEndEvent, function() {
+					$( this ).addClass( isHidden );
+					// Reset to options list
+					$( '.post-options' ).removeClass( offscreenHidden );
+					$( '.setting-modal').addClass( offscreenHidden );
+				});
 		}
 
 		/**
 		 * Interactive behavior for the post title's field placeholder
 		 */
 		function monitorPlaceholder() {
-			var $selector = $( '#title-container'),
-				$placeholder = $('.post-title-placeholder');
+			var $titleField = $( '#title-container' ),
+				$placeholder = $( '.post-title-placeholder' );
 
-			$selector.on( 'focus', function() {
-				$placeholder.addClass('is-hidden');
-			} );
-
-			$selector.on( 'blur', function() {
-				if ( ! $( this ).text() ) {
-					$placeholder.removeClass('is-hidden');
+			$titleField.on( 'focus', function() {
+				$placeholder.addClass( 'is-hidden' );
+			}).on( 'blur', function() {
+				if ( ! $titleField.text() && ! $titleField.html() ) {
+					$placeholder.removeClass( 'is-hidden' );
 				}
-			} );
+			}).on( 'keyup', function() {
+				saveAlert = true;
+			}).on( 'paste', function( event ) {
+				var text, range,
+					clipboard = event.originalEvent.clipboardData || window.clipboardData;
+
+				if ( clipboard ) {
+					try{
+						text = clipboard.getData( 'Text' ) || clipboard.getData( 'text/plain' );
+
+						if ( text ) {
+							text = $.trim( text.replace( /\s+/g, ' ' ) );
+
+							if ( window.getSelection ) {
+								range = window.getSelection().getRangeAt(0);
+
+								if ( range ) {
+									if ( ! range.collapsed ) {
+										range.deleteContents();
+									}
+
+									range.insertNode( document.createTextNode( text ) );
+								}
+							} else if ( document.selection ) {
+								range = document.selection.createRange();
+
+								if ( range ) {
+									range.text = text;
+								}
+							}
+						}
+					} catch ( er ) {}
+
+					event.preventDefault();
+				}
+
+				saveAlert = true;
+
+				setTimeout( function() {
+					$titleField.text( getTitleText() );
+				}, 50 );
+			});
+
+			if ( $titleField.text() || $titleField.html() ) {
+				$placeholder.addClass('is-hidden');
+			}
+		}
+
+		function toggleCatItem( $element ) {
+			if ( $element.hasClass( 'selected' ) ) {
+				$element.removeClass( 'selected' ).attr( 'aria-checked', 'false' );
+			} else {
+				$element.addClass( 'selected' ).attr( 'aria-checked', 'true' );
+			}
+		}
+
+		function monitorCatList() {
+			$( '.categories-select' ).on( 'click.press-this keydown.press-this', function( event ) {
+				var $element = $( event.target );
+
+				if ( $element.is( 'div.category' ) ) {
+					if ( event.type === 'keydown' && event.keyCode !== 32 ) {
+						return;
+					}
+
+					toggleCatItem( $element );
+					event.preventDefault();
+				}
+			});
+		}
+
+		function splitButtonClose() {
+			$( '.split-button' ).removeClass( 'is-open' );
+			$( '.split-button-toggle' ).attr( 'aria-expanded', 'false' );
 		}
 
 		/* ***************************************************************
@@ -762,33 +716,133 @@
 		function render(){
 			// We're on!
 			renderToolsVisibility();
-			renderSuggestedTitle();
 			renderDetectedMedia();
-			$( document ).on( 'tinymce-editor-init', renderSuggestedContent );
 			renderStartupNotices();
+
+			if ( window.tagBox ) {
+				window.tagBox.init();
+			}
+
+			// iOS doesn't fire click events on "standard" elements without this...
+			if ( iOS ) {
+				$( document.body ).css( 'cursor', 'pointer' );
+			}
 		}
 
 		/**
 		 * Set app events and other state monitoring related code.
 		 */
-		function monitor(){
-			$( '#current-site a').click( function( e ) {
-				e.preventDefault();
-			} );
+		function monitor() {
+			var $splitButton = $( '.split-button' );
 
-			// Publish and Draft buttons and submit
+			$document.on( 'tinymce-editor-init', function( event, ed ) {
+				editor = ed;
 
-			$( '#draft-field' ).on( 'click', function() {
-				submitPost( 'draft' );
-			} );
+				editor.on( 'nodechange', function() {
+					hasSetFocus = true;
+				});
 
-			$( '#publish-field' ).on( 'click', function() {
-				submitPost( 'publish' );
-			} );
+				editor.on( 'focus', function() {
+					splitButtonClose();
+				});
+
+				editor.on( 'show', function() {
+					setTimeout( function() {
+						editor.execCommand( 'wpAutoResize' );
+					}, 300 );
+				});
+
+				editor.on( 'hide', function() {
+					setTimeout( function() {
+						textEditorResize( 'reset' );
+					}, 100 );
+				});
+
+				editor.on( 'keyup', mceKeyup );
+				editor.on( 'undo redo', mceScroll );
+
+			}).on( 'click.press-this keypress.press-this', '.suggested-media-thumbnail', function( event ) {
+				if ( event.type === 'click' || event.keyCode === 13 ) {
+					insertSelectedMedia( $( this ) );
+				}
+			}).on( 'click.press-this', function( event ) {
+				if ( ! $( event.target ).closest( 'button' ).hasClass( 'split-button-toggle' ) ) {
+					splitButtonClose();
+				}
+			});
+
+			// Publish, Draft and Preview buttons
+			$( '.post-actions' ).on( 'click.press-this', function( event ) {
+				var location,
+					$target = $( event.target ),
+					$button = $target.closest( 'button' );
+
+				if ( $button.length ) {
+					if ( $button.hasClass( 'draft-button' ) ) {
+						$( '.publish-button' ).addClass( 'is-saving' );
+						submitPost( 'draft' );
+					} else if ( $button.hasClass( 'publish-button' ) ) {
+						$button.addClass( 'is-saving' );
+
+						if ( window.history.replaceState ) {
+							location = window.location.href;
+							location += ( location.indexOf( '?' ) !== -1 ) ? '&' : '?';
+							location += 'wp-press-this-reload=true';
+
+							window.history.replaceState( null, null, location );
+						}
+
+						submitPost( 'publish' );
+					} else if ( $button.hasClass( 'preview-button' ) ) {
+						prepareFormData();
+						window.opener && window.opener.focus();
+
+						$( '#wp-preview' ).val( 'dopreview' );
+						$( '#pressthis-form' ).attr( 'target', '_blank' ).submit().attr( 'target', '' );
+						$( '#wp-preview' ).val( '' );
+					} else if ( $button.hasClass( 'standard-editor-button' ) ) {
+						$( '.publish-button' ).addClass( 'is-saving' );
+						$( '#pt-force-redirect' ).val( 'true' );
+						submitPost( 'draft' );
+					} else if ( $button.hasClass( 'split-button-toggle' ) ) {
+						if ( $splitButton.hasClass( 'is-open' ) ) {
+							$splitButton.removeClass( 'is-open' );
+							$button.attr( 'aria-expanded', 'false' );
+						} else {
+							$splitButton.addClass( 'is-open' );
+							$button.attr( 'aria-expanded', 'true' );
+						}
+					}
+				}
+			});
 
 			monitorOptionsModal();
-			monitorSidebarToggle();
 			monitorPlaceholder();
+			monitorCatList();
+
+			$( '.options' ).on( 'click.press-this', function() {
+				if ( $( this ).hasClass( 'open' ) ) {
+					closeSidebar();
+				} else {
+					openSidebar();
+				}
+			});
+
+			// Close the sidebar when focus moves outside of it.
+			$( '.options-panel, .options-panel-back' ).on( 'focusout.press-this', function() {
+				setTimeout( function() {
+					var node = document.activeElement,
+						$node = $( node );
+
+					if ( sidebarIsOpen && node && ! $node.hasClass( 'options-panel-back' ) &&
+						( node.nodeName === 'BODY' ||
+							( ! $node.closest( '.options-panel' ).length &&
+							! $node.closest( '.options' ).length ) ) ) {
+
+						closeSidebar();
+					}
+				}, 50 );
+			});
 
 			$( '#post-formats-select input' ).on( 'change', function() {
 				var $this = $( this );
@@ -798,23 +852,21 @@
 				}
 			} );
 
-			// Needs more work, doesn't detect when the other JS changes the value of #tax-input-post_tag
-			$( '#tax-input-post_tag' ).on( 'change', function() {
-				var val =  $( this ).val();
-				$( '#post-option-tags' ).text( ( val ) ? val.replace( /,([^\s])/g, ', $1' ) : '' );
-			} );
-
-			$( window ).on( 'beforeunload.press-this', function() {
+			$window.on( 'beforeunload.press-this', function() {
 				if ( saveAlert || ( editor && editor.isDirty() ) ) {
 					return __( 'saveAlert' );
 				}
-			} );
+			} ).on( 'resize.press-this', function() {
+				if ( ! editor || editor.isHidden() ) {
+					textEditorResize( 'reset' );
+				}
+			});
 
 			$( 'button.add-cat-toggle' ).on( 'click.press-this', function() {
 				var $this = $( this );
 
 				$this.toggleClass( 'is-toggled' );
-				$this.attr( 'aria-expanded', ! $this.attr( 'aria-expanded' ) );
+				$this.attr( 'aria-expanded', 'false' === $this.attr( 'aria-expanded' ) ? 'true' : 'false' );
 				$( '.setting-modal .add-category, .categories-search-wrapper' ).toggleClass( 'is-hidden' );
 			} );
 
@@ -843,6 +895,8 @@
 				}
 			} );
 
+			$textEditor.on( 'focus.press-this input.press-this propertychange.press-this', textEditorResize );
+
 			return true;
 		}
 
@@ -853,20 +907,19 @@
 				catsCache.push( {
 					node: $this,
 					parents: $this.parents( 'li' ),
-					text: $this.children( 'label' ).text().toLowerCase()
+					text: $this.children( '.category' ).text().toLowerCase()
 				} );
 			} );
 		}
 
 		// Let's go!
-		$( document ).ready( function() {
+		$document.ready( function() {
 			render();
 			monitor();
 			refreshCatsCache();
 		});
 
-		// Expose public methods
-		// TODO: which are needed?
+		// Expose public methods?
 		return {
 			renderNotice: renderNotice,
 			renderError: renderError

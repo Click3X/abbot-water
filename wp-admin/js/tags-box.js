@@ -112,6 +112,11 @@ var tagBox, array_unique_noempty;
 			a = a || false;
 
 			text = a ? $(a).text() : newtag.val();
+
+			if ( 'undefined' == typeof( text ) ) {
+				return false;
+			}
+
 			tagsval = tags.val();
 			newtags = tagsval ? tagsval + comma + text : text;
 
@@ -172,7 +177,7 @@ var tagBox, array_unique_noempty;
 				var tax = $(this).closest('div.tagsdiv').attr('id');
 				$(this).suggest(
 					ajaxurl + '?action=ajax-tag-search&tax=' + tax,
-					{ delay: 500, minchars: 2, multiple: true, multipleSep: window.tagsBoxL10n.tagDelimiter + ' ' }
+					{ delay: 500, minchars: 2, multiple: true, multipleSep: window.tagsBoxL10n.tagDelimiter }
 				);
 			});
 
@@ -194,9 +199,4 @@ var tagBox, array_unique_noempty;
 			});
 		}
 	};
-
-	$( document ).ready( function() {
-		tagBox.init();
-	});
-
 }( jQuery ));
